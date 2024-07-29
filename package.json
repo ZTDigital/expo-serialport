@@ -1,7 +1,7 @@
 {
-  "name": "expo-serialport",
+  "name": "@zybertech/expo-serialport",
   "version": "0.2.2",
-  "description": "Simple serial port wrapper for android.",
+  "description": "Zybertech Simple serial port wrapper for android.",
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "scripts": {
@@ -21,13 +21,10 @@
     "expo-serialport",
     "ExpoSerialport"
   ],
-  "repository": "https://github.com/AndreOneti/expo-serialport",
-  "bugs": {
-    "url": "https://github.com/AndreOneti/expo-serialport/issues"
-  },
-  "author": "Andre Carvalho <andreluiz.onete@hotmail.com> (https://github.com/AndreOneti)",
+  "repository": "https://github.com/ZTDigital/expo-serialport.git",
+  "author": "ZYBERTECH <support@zybertech.co> (https://github.com/ZTDigital)",
   "license": "MIT",
-  "homepage": "https://github.com/AndreOneti/expo-serialport#readme",
+  "homepage": "https://github.com/ZTDigital/expo-serialport#readme",
   "dependencies": {},
   "devDependencies": {
     "@types/react": "^18.0.25",

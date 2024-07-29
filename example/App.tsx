@@ -18,6 +18,9 @@ export default function App() {
         serialNumber,
         ...device,
       });
+      const portName = device.deviceName;
+      await ExpoSerialport.openPort(portName, 9600);
+      console.log("Port opened:", portName);
     } catch (e) {
       console.log(e);
     }

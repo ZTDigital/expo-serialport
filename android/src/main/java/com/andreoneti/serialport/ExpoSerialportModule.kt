@@ -163,4 +163,61 @@ class ExpoSerialportModule : Module() {
 
     usbManager.requestPermission(device, permissionIntent)
   }
+  private fun openPort(portName: String, baudRate: Int, promise: Promise) {
+    try {
+      val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
+      val deviceList = usbManager.deviceList.values.toList()
+      val usbDevice = deviceList.find { it.deviceName == portName }
+
+      if (usbDevice == null) {
+        promise.reject("DEVICE_NOT_FOUND", "Device not found")
+        return
+      }
+
+      if (!usbManager.hasPermission(usbDevice)) {
+        promise.reject("PERMISSION_DENIED", "Permission denied for device")
+        return
+      }
+
+      val connection = usbManager.openDevice(usbDevice)
+      val serialPort = UsbSerialDevice.createUsbSerialDevice(usbDevice, connection)
+      if (serialPort != null) {
+        serialPort.open()
+        serialPort.setBaudRate(baudRate)
+        serialPort.setDataBits(UsbSerialInterface.DATA_BITS_8)
+        serialPort.setStopBits(UsbSerialInterface.STOP_BITS_1)
+        serialPort.setParity(UsbSerialInterface.PARITY_NONE)
+        serialPort.setFlowControl(UsbSerialInterface.FLOW_CONTROL_OFF)
+        promise.resolve("Port opened successfully")
+      } else {
+        promise.reject("OPEN_FAILED", "Failed to open serial port")
+      }
+    } catch (e: Exception) {
+      promise.reject("ERROR", e.message)
+    }
+  }
+  private fun writeData(data: String, promise: Promise) {
+    try {
+        if (serialPort == null) {
+            promise.reject("PORT_NOT_OPEN", "Serial port is not open")
+            return
+        }
+        serialPort.write(data.toByteArray())
+        promise.resolve("Data written successfully")
+    } catch (e: Exception) {
+        promise.reject("ERROR", e.message)
+    }
+  }
+  private fun closePort(promise: Promise) {
+    try {
+        if (serialPort != null) {
+            serialPort.close()
+            promise.resolve("Port closed successfully")
+          } else {
+              promise.reject("PORT_NOT_OPEN", "Serial port is not open")
+          }
+      } catch (e: Exception) {
+          promise.reject("ERROR", e.message)
+    }
+  }
 }
