@@ -1,6 +1,6 @@
-# expo-serialport
+# ZT Expo-Serialport
 
-Simple serial port wrapper for android.
+Zybertech Simple serial port wrapper for android.
 
 # API documentation
 
