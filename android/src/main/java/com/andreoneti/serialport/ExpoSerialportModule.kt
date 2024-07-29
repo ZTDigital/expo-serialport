@@ -31,193 +31,200 @@ import expo.modules.kotlin.modules.ModuleDefinition
 fun ByteArray.toHexString() = joinToString("") { "%02x".format(it) }
 
 class ExpoSerialportModule : Module() {
-  override fun definition() = ModuleDefinition {
-    Name("ExpoSerialport")
+    private var serialPort: UsbSerialDevice? = null
 
-    Function("listDevices") {
-      return@Function listDevices()
+    override fun definition() = ModuleDefinition {
+        Name("ExpoSerialport")
+
+        Function("listDevices") {
+            return@Function listDevices()
+        }
+
+        AsyncFunction("getSerialNumberAsync") { deviceId: Int, promise: Promise ->
+            val usbManager: UsbManager = getUsbManager()
+            val usbDeviceList: List<UsbDevice>? = usbManager.deviceList.values.toList()
+            val usbDevice: UsbDevice? = usbDeviceList?.find { it.deviceId == deviceId }
+
+            if (usbDevice == null) {
+                val error: CodedException = CodedException(DEVICE_NOT_FOUND)
+                promise.reject(error)
+            } else if (!usbManager.hasPermission(usbDevice)) {
+                val error: CodedException = CodedException(PERMISSION_REQUIRED)
+                promise.reject(error)
+            } else {
+                promise.resolve(usbDevice.serialNumber)
+            }
+        }
+
+        AsyncFunction("hasPermissionAsync") { deviceId: Int, promise: Promise ->
+            val usbDevice: UsbDevice? = findDevice(deviceId)
+
+            if (usbDevice == null) {
+                val error: CodedException = CodedException(DEVICE_NOT_FOUND)
+                promise.reject(error)
+            } else {
+                val usbManager: UsbManager = getUsbManager()
+                val hasPermission: Boolean = usbManager.hasPermission(usbDevice)
+                promise.resolve(hasPermission)
+            }
+        }
+
+        AsyncFunction("requestPermissionAsync") { deviceId: Int, promise: Promise ->
+            val usbDevice: UsbDevice? = findDevice(deviceId)
+
+            if (usbDevice == null) {
+                val error: CodedException = CodedException(DEVICE_NOT_FOUND)
+                promise.reject(error)
+            } else {
+                requestPermission(usbDevice, promise)
+            }
+        }
+
+        AsyncFunction("openPort") { portName: String, baudRate: Int, promise: Promise ->
+            openPort(portName, baudRate, promise)
+        }
+
+        AsyncFunction("writeData") { data: String, promise: Promise ->
+            writeData(data, promise)
+        }
+
+        AsyncFunction("closePort") { promise: Promise ->
+            closePort(promise)
+        }
     }
 
-    AsyncFunction("getSerialNumberAsync") { deviceId: Int, promise: Promise ->
-      val usbManager: UsbManager = getUsbManager()
-      val usbDeviceList: List<UsbDevice>? = usbManager.deviceList.values.toList()
+    private val DEVICE_NOT_FOUND: String = "device_not_found"
+    private val PERMISSION_DENIED: String = "permission_denied"
+    private val PERMISSION_REQUIRED: String = "permission_required"
 
-      val usbDevice: UsbDevice? = usbDeviceList?.find { it.deviceId == deviceId }
+    private val context: Context
+        get() = requireNotNull(appContext.reactContext)
 
-      if (usbDevice == null) {
-        val error: CodedException = CodedException(DEVICE_NOT_FOUND)
-        promise.reject(error)
-      } else if(!usbManager.hasPermission(usbDevice)) {
-        val error: CodedException = CodedException(PERMISSION_REQUIRED)
-        promise.reject(error)
-      } else {
-        promise.resolve(usbDevice.getSerialNumber())
-      }
+    private fun getPreferences(): SharedPreferences {
+        return context.getSharedPreferences(context.packageName + ".settings", Context.MODE_PRIVATE)
     }
 
-    AsyncFunction("hasPermissionAsync") { deviceId: Int, promise: Promise ->
-      val usbDevice: UsbDevice? = findDevice(deviceId)
+    private fun getUsbManager(): UsbManager {
+        return context.getSystemService(Context.USB_SERVICE) as UsbManager
+    }
 
-      if (usbDevice == null) {
-        val error: CodedException = CodedException(DEVICE_NOT_FOUND)
-        promise.reject(error)
-      } else {
+    private fun listDevices(): WritableArray {
         val usbManager: UsbManager = getUsbManager()
-        val hasPermission: Boolean = usbManager.hasPermission(usbDevice)
+        val usbDeviceList: List<UsbDevice>? = usbManager.deviceList.values.toList()
 
-        promise.resolve(hasPermission)
-      }
-    }
+        val usbDevicesArray: WritableArray = WritableNativeArray()
 
-    AsyncFunction("requestPermissionAsync") { deviceId: Int, promise: Promise ->
-      val usbDevice: UsbDevice? = findDevice(deviceId)
-
-      if (usbDevice == null) {
-        val error: CodedException = CodedException(DEVICE_NOT_FOUND)
-        promise.reject(error)
-      } else {
-        requestPermission(usbDevice, promise)
-      }
-    }
-  }
-
-  private val DEVICE_NOT_FOUND: String = "device_not_found"
-  private val PERMISSION_DENIED: String = "permission_denied"
-  private val PERMISSION_REQUIRED: String = "permission_required"
-
-  private val context
-  get() = requireNotNull(appContext.reactContext)
-
-  private fun getPreferences(): SharedPreferences {
-    return context.getSharedPreferences(context.packageName + ".settings", Context.MODE_PRIVATE)
-  }
-
-  private fun getUsbManager(): UsbManager {
-    return context.getSystemService(Context.USB_SERVICE) as UsbManager
-  }
-
-  private fun listDevices(): WritableArray {
-    val usbManager: UsbManager = getUsbManager()
-    val usbDeviceList: List<UsbDevice>? = usbManager.deviceList.values.toList()
-
-    val usbDevicesArray: WritableArray = WritableNativeArray()
-
-    if (usbDeviceList != null) {
-      for (usbDevice in usbDeviceList) {
-        val usbDeviceMap: WritableMap = WritableNativeMap()
-
-        usbDeviceMap.putInt("deviceId", usbDevice.getDeviceId())
-        usbDeviceMap.putInt("vendorId", usbDevice.getVendorId())
-        usbDeviceMap.putInt("productId", usbDevice.getProductId())
-        usbDeviceMap.putInt("deviceClass", usbDevice.getDeviceClass())
-        usbDeviceMap.putString("deviceName", usbDevice.getDeviceName())
-        usbDeviceMap.putString("productName", usbDevice.getProductName())
-        usbDeviceMap.putInt("deviceProtocol", usbDevice.getDeviceProtocol())
-        usbDeviceMap.putInt("interfaceCount", usbDevice.getInterfaceCount())
-        usbDeviceMap.putString("manufacturerName", usbDevice.getManufacturerName())
-
-        usbDevicesArray.pushMap(usbDeviceMap)
-      }
-    }
-
-    return usbDevicesArray
-  }
-
-  private fun findDevice(deviceId:Int): UsbDevice? {
-    val usbManager: UsbManager = getUsbManager()
-    val usbDeviceList: List<UsbDevice>? = usbManager.deviceList.values.toList()
-
-    val usbDevice: UsbDevice? = usbDeviceList?.find { it.deviceId == deviceId }
-
-    return usbDevice
-  }
-
-  private fun requestPermission(device: UsbDevice, promise: Promise): Unit {
-    val ACTION_USB_PERMISSION: String = context.packageName + ".GRANT_USB"
-    val usbManager: UsbManager = getUsbManager()
-    val permissionIntent = PendingIntent.getBroadcast(
-      context,
-      0,
-      Intent(ACTION_USB_PERMISSION),
-      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-    )
-
-    val permissionReceiver = object : BroadcastReceiver() {
-      override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == ACTION_USB_PERMISSION) {
-          intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
-          val granted: Boolean = usbManager.hasPermission(device)
-          if (granted) {
-            promise.resolve(null)
-          } else {
-            val error: CodedException = CodedException(PERMISSION_DENIED)
-            promise.reject(error)
-          }
-          context.unregisterReceiver(this)
+        usbDeviceList?.forEach { usbDevice ->
+            val usbDeviceMap: WritableMap = WritableNativeMap()
+            usbDeviceMap.putInt("deviceId", usbDevice.deviceId)
+            usbDeviceMap.putInt("vendorId", usbDevice.vendorId)
+            usbDeviceMap.putInt("productId", usbDevice.productId)
+            usbDeviceMap.putInt("deviceClass", usbDevice.deviceClass)
+            usbDeviceMap.putString("deviceName", usbDevice.deviceName)
+            usbDeviceMap.putString("productName", usbDevice.productName)
+            usbDeviceMap.putInt("deviceProtocol", usbDevice.deviceProtocol)
+            usbDeviceMap.putInt("interfaceCount", usbDevice.interfaceCount)
+            usbDeviceMap.putString("manufacturerName", usbDevice.manufacturerName)
+            usbDevicesArray.pushMap(usbDeviceMap)
         }
-      }
+
+        return usbDevicesArray
     }
 
-    val filter = IntentFilter(ACTION_USB_PERMISSION)
-    context.registerReceiver(permissionReceiver, filter)
-
-    usbManager.requestPermission(device, permissionIntent)
-  }
-  private fun openPort(portName: String, baudRate: Int, promise: Promise) {
-    try {
-      val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
-      val deviceList = usbManager.deviceList.values.toList()
-      val usbDevice = deviceList.find { it.deviceName == portName }
-
-      if (usbDevice == null) {
-        promise.reject("DEVICE_NOT_FOUND", "Device not found")
-        return
-      }
-
-      if (!usbManager.hasPermission(usbDevice)) {
-        promise.reject("PERMISSION_DENIED", "Permission denied for device")
-        return
-      }
-
-      val connection = usbManager.openDevice(usbDevice)
-      val serialPort = UsbSerialDevice.createUsbSerialDevice(usbDevice, connection)
-      if (serialPort != null) {
-        serialPort.open()
-        serialPort.setBaudRate(baudRate)
-        serialPort.setDataBits(UsbSerialInterface.DATA_BITS_8)
-        serialPort.setStopBits(UsbSerialInterface.STOP_BITS_1)
-        serialPort.setParity(UsbSerialInterface.PARITY_NONE)
-        serialPort.setFlowControl(UsbSerialInterface.FLOW_CONTROL_OFF)
-        promise.resolve("Port opened successfully")
-      } else {
-        promise.reject("OPEN_FAILED", "Failed to open serial port")
-      }
-    } catch (e: Exception) {
-      promise.reject("ERROR", e.message)
+    private fun findDevice(deviceId: Int): UsbDevice? {
+        val usbManager: UsbManager = getUsbManager()
+        val usbDeviceList: List<UsbDevice>? = usbManager.deviceList.values.toList()
+        return usbDeviceList?.find { it.deviceId == deviceId }
     }
-  }
-  private fun writeData(data: String, promise: Promise) {
-    try {
-        if (serialPort == null) {
-            promise.reject("PORT_NOT_OPEN", "Serial port is not open")
-            return
+
+    private fun requestPermission(device: UsbDevice, promise: Promise) {
+        val ACTION_USB_PERMISSION: String = context.packageName + ".GRANT_USB"
+        val usbManager: UsbManager = getUsbManager()
+        val permissionIntent = PendingIntent.getBroadcast(
+            context, 0, Intent(ACTION_USB_PERMISSION),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val permissionReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                if (intent.action == ACTION_USB_PERMISSION) {
+                    val granted: Boolean = usbManager.hasPermission(device)
+                    if (granted) {
+                        promise.resolve(null)
+                    } else {
+                        val error: CodedException = CodedException(PERMISSION_DENIED)
+                        promise.reject(error)
+                    }
+                    context.unregisterReceiver(this)
+                }
+            }
         }
-        serialPort.write(data.toByteArray())
-        promise.resolve("Data written successfully")
-    } catch (e: Exception) {
-        promise.reject("ERROR", e.message)
+
+        val filter = IntentFilter(ACTION_USB_PERMISSION)
+        context.registerReceiver(permissionReceiver, filter)
+        usbManager.requestPermission(device, permissionIntent)
     }
-  }
-  private fun closePort(promise: Promise) {
-    try {
-        if (serialPort != null) {
-            serialPort.close()
-            promise.resolve("Port closed successfully")
-          } else {
-              promise.reject("PORT_NOT_OPEN", "Serial port is not open")
-          }
-      } catch (e: Exception) {
-          promise.reject("ERROR", e.message)
+
+    private fun openPort(portName: String, baudRate: Int, promise: Promise) {
+        try {
+            val usbManager = getUsbManager()
+            val deviceList = usbManager.deviceList.values.toList()
+            val usbDevice = deviceList.find { it.deviceName == portName }
+
+            if (usbDevice == null) {
+                promise.reject("DEVICE_NOT_FOUND", "Device not found")
+                return
+            }
+
+            if (!usbManager.hasPermission(usbDevice)) {
+                promise.reject("PERMISSION_DENIED", "Permission denied for device")
+                return
+            }
+
+            val connection = usbManager.openDevice(usbDevice)
+            serialPort = UsbSerialDevice.createUsbSerialDevice(usbDevice, connection)
+            if (serialPort != null) {
+                serialPort?.apply {
+                    open()
+                    setBaudRate(baudRate)
+                    setDataBits(UsbSerialInterface.DATA_BITS_8)
+                    setStopBits(UsbSerialInterface.STOP_BITS_1)
+                    setParity(UsbSerialInterface.PARITY_NONE)
+                    setFlowControl(UsbSerialInterface.FLOW_CONTROL_OFF)
+                }
+                promise.resolve("Port opened successfully")
+            } else {
+                promise.reject("OPEN_FAILED", "Failed to open serial port")
+            }
+        } catch (e: Exception) {
+            promise.reject("ERROR", e.message)
+        }
     }
-  }
+
+    private fun writeData(data: String, promise: Promise) {
+        try {
+            if (serialPort == null || !(serialPort?.isOpen ?: false)) {
+                promise.reject("PORT_NOT_OPEN", "Serial port is not open")
+                return
+            }
+            serialPort?.write(data.toByteArray())
+            promise.resolve("Data written successfully")
+        } catch (e: Exception) {
+            promise.reject("ERROR", e.message)
+        }
+    }
+
+    private fun closePort(promise: Promise) {
+        try {
+            if (serialPort != null && (serialPort?.isOpen ?: false)) {
+                serialPort?.close()
+                promise.resolve("Port closed successfully")
+            } else {
+                promise.reject("PORT_NOT_OPEN", "Serial port is not open")
+            }
+        } catch (e: Exception) {
+            promise.reject("ERROR", e.message)
+        }
+    }
 }
+
