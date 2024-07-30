@@ -18,20 +18,21 @@ buildscript {
   }
 
   // Ensures backward compatibility
-  ext.getKotlinVersion = {
-    if (ext.has("kotlinVersion")) {
-      ext.kotlinVersion()
-    } else {
-      ext.safeExtGet("kotlinVersion", "1.6.10")
-    }
-  }
+  // ext.getKotlinVersion = {
+  //   if (ext.has("kotlinVersion")) {
+  //     ext.kotlinVersion()
+  //   } else {
+  //     ext.safeExtGet("kotlinVersion", "1.6.10")
+  //   }
+  // }
+    kotlinVersion = '1.9.23'
 
   repositories {
     mavenCentral()
   }
 
   dependencies {
-    classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${getKotlinVersion()}")
+    classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
   }
 }
 
