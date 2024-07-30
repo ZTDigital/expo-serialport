@@ -31,9 +31,6 @@ import expo.modules.kotlin.modules.ModuleDefinition
 fun ByteArray.toHexString() = joinToString("") { "%02x".format(it) }
 
 class ExpoSerialportModule : Module() {
-  private var serialPortConnection: UsbDeviceConnection? = null
-    private var serialPort: UsbEndpoint? = null
-    private var usbDevice: UsbDevice? = null
   override fun definition() = ModuleDefinition {
     Name("ExpoSerialport")
 
@@ -72,8 +69,8 @@ class ExpoSerialportModule : Module() {
       }
     }
 
-    AsyncFunction("requestPermissionAsync") { deviceId: Int, promise: Promise ->
-      val usbDevice: UsbDevice? = findDevice(deviceId)
+    AsyncFunction("requestPermissionAsync") { productName: String, promise: Promise ->
+      val usbDevice: UsbDevice? = findPrinter(productName)
 
       if (usbDevice == null) {
         val error: CodedException = CodedException(DEVICE_NOT_FOUND)
@@ -83,14 +80,15 @@ class ExpoSerialportModule : Module() {
       }
     }
 
-    AsyncFunction("openPort") { portName: String, baudRate: Int, promise: Promise ->
-      openPort(portName, baudRate, promise)
-    }
-    AsyncFunction("writeData") { data: String, promise: Promise ->
-      writeData(data, promise)
-    }
-    AsyncFunction("closePort") { promise: Promise ->
-      closePort(promise)
+    AsyncFunction("openPort") { productName: String, promise: Promise ->
+      val usbDevice: UsbDevice? = findPrinter(productName)
+
+      if (usbDevice == null) {
+        val error: CodedException = CodedException(DEVICE_NOT_FOUND)
+        promise.reject(error)
+      } else {
+        openPort(usbDevice, promise)
+      }
     }
 
   }
@@ -146,6 +144,15 @@ class ExpoSerialportModule : Module() {
     return usbDevice
   }
 
+  private fun findPrinter(productName:String): UsbDevice? {
+    val usbManager: UsbManager = getUsbManager()
+    val usbDeviceList: List<UsbDevice>? = usbManager.deviceList.values.toList()
+
+    val usbDevice: UsbDevice? = usbDeviceList?.find { it.productName == productName }
+
+    return usbDevice
+  }
+
   private fun requestPermission(device: UsbDevice, promise: Promise): Unit {
     val ACTION_USB_PERMISSION: String = context.packageName + ".GRANT_USB"
     val usbManager: UsbManager = getUsbManager()
@@ -177,56 +184,15 @@ class ExpoSerialportModule : Module() {
 
     usbManager.requestPermission(device, permissionIntent)
   }
-  private fun openPort(portName: String, baudRate: Int, promise: Promise) {
-    try {
-      val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
-      val deviceList = usbManager.deviceList.values.toList()
-      val usbDevice = deviceList.find { it.deviceName == portName }
+  private fun openPort(device: UsbDevice, promise: Promise) {
+    val usbManager: UsbManager = getUsbManager()
+    val connection: UsbDeviceConnection? = usbManager.openDevice(device)
 
-      if (usbDevice == null) {
-        promise.reject("DEVICE_NOT_FOUND", "Device not found")
-        return
-      }
-
-      if (!usbManager.hasPermission(usbDevice)) {
-        promise.reject("PERMISSION_DENIED", "Permission denied for device")
-        return
-      }
-
-      val connection = usbManager.openDevice(usbDevice)
-      val usbInterface = usbDevice.getInterface(0)
-      serialPort = usbInterface.getEndpoint(0)
-      serialPortConnection = connection
-      connection.claimInterface(usbInterface, true)
-    } catch (e: Exception) {
-      promise.reject("ERROR", e.message)
-    }
-  }
-  private fun writeData(data: String, promise: Promise) {
-    try {
-        if (serialPort == null) {
-            promise.reject("PORT_NOT_OPEN", "Serial port is not open")
-            return
-        }
-        val buffer = data.toByteArray()
-        val usbRequest = UsbRequest()
-        usbRequest.initialize(serialPortConnection, serialPort)
-        usbRequest.queue(ByteBuffer.wrap(buffer), buffer.size)
-        promise.resolve("Data written successfully")
-    } catch (e: Exception) {
-        promise.reject("ERROR", e.message)
-    }
-  }
-  private fun closePort(promise: Promise) {
-    try {
-        if (serialPortConnection != null) {
-            serialPortConnection?.close()
-            promise.resolve("Port closed successfully")
-          } else {
-              promise.reject("PORT_NOT_OPEN", "Serial port is not open")
-          }
-      } catch (e: Exception) {
-          promise.reject("ERROR", e.message)
+    if (connection == null) {
+        val error: CodedException = CodedException("connection_failed")
+        promise.reject(error)
+    } else {
+        promise.resolve("Port opened successfully")
     }
   }
 }

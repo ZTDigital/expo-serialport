@@ -23,17 +23,11 @@ export function getSerialNumberAsync(deviceId: number): Promise<string> {
 export function hasPermissionAsync(deviceId: number): Promise<boolean> {
   return ExpoSerialportModule.hasPermissionAsync(deviceId);
 }
-export function requestPermissionAsync(deviceId: number): Promise<void> {
-  return ExpoSerialportModule.requestPermissionAsync(deviceId);
+export function requestPermissionAsync(productName: string): Promise<void> {
+  return ExpoSerialportModule.requestPermissionAsync(productName);
 }
-export function openPort(portName, baudRate) {
-  return ExpoSerialportModule.openPort(portName, baudRate);
-}
-export function writeData(data) {
-  return ExpoSerialportModule.writeData(data);
-}
-export function closePort() {
-  return ExpoSerialportModule.closePort();
+export function openPort(productName): Promise<void>  { 
+  return ExpoSerialportModule.openPort(productName);
 }
 
 export default {
@@ -42,6 +36,4 @@ export default {
   getSerialNumberAsync,
   requestPermissionAsync,
   openPort,
-  writeData,
-  closePort,
 };

@@ -25,12 +25,11 @@
   "author": "ZYBERTECH <support@zybertech.co> (https://github.com/ZTDigital)",
   "license": "MIT",
   "homepage": "https://github.com/ZTDigital/expo-serialport#readme",
-  "dependencies": {},
   "devDependencies": {
     "@types/react": "^18.0.25",
     "@types/react-native": "^0.70.6",
     "expo-module-scripts": "^3.0.4",
-    "expo-modules-core": "^1.1.0"
+    "expo-modules-core": "^1.12.20"
   },
   "peerDependencies": {
     "expo": "*",

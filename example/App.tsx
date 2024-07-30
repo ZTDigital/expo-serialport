@@ -9,7 +9,7 @@ export default function App() {
     console.log({ device });
     if (!device) return;
     try {
-      await ExpoSerialport.requestPermissionAsync(device.deviceId);
+      await ExpoSerialport.requestPermissionAsync(device.productName);
 
       const serialNumber = await ExpoSerialport.getSerialNumberAsync(
         device.deviceId
@@ -18,9 +18,7 @@ export default function App() {
         serialNumber,
         ...device,
       });
-      const portName = device.deviceName;
-      await ExpoSerialport.openPort(portName, 9600);
-      console.log("Port opened:", portName);
+      await ExpoSerialport.openPort(device.productName);
     } catch (e) {
       console.log(e);
     }
