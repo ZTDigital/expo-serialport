@@ -1,5 +1,5 @@
 {
-  "name": "@zybertech/expo-serialport",
+  "name": "expo-serialport",
   "version": "0.2.2",
   "description": "Zybertech Simple serial port wrapper for android.",
   "main": "build/index.js",
