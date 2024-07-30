@@ -18,7 +18,7 @@ export default function App() {
         serialNumber,
         ...device,
       });
-      await ExpoSerialport.openPort(device.productName);
+      await ExpoSerialport.openPortAsync(device.productName);
     } catch (e) {
       console.log(e);
     }

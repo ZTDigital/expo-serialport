@@ -80,7 +80,7 @@ class ExpoSerialportModule : Module() {
       }
     }
 
-    AsyncFunction("openPort") { productName: String, promise: Promise ->
+    AsyncFunction("openPortAsync") { productName: String, promise: Promise ->
       val usbDevice: UsbDevice? = findPrinter(productName)
 
       if (usbDevice == null) {

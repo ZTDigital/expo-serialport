@@ -26,8 +26,8 @@ export function hasPermissionAsync(deviceId: number): Promise<boolean> {
 export function requestPermissionAsync(productName: string): Promise<void> {
   return ExpoSerialportModule.requestPermissionAsync(productName);
 }
-export function openPort(productName): Promise<void>  { 
-  return ExpoSerialportModule.openPort(productName);
+export function openPortAsync(productName: string): Promise<string>  { 
+  return ExpoSerialportModule.openPortAsync(productName);
 }
 
 export default {
@@ -35,5 +35,5 @@ export default {
   hasPermissionAsync,
   getSerialNumberAsync,
   requestPermissionAsync,
-  openPort,
+  openPortAsync,
 };
