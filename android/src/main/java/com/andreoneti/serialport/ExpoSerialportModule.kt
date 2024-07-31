@@ -100,10 +100,10 @@ class ExpoSerialportModule : Module() {
   private val PERMISSION_DENIED: String = "permission_denied"
   private val PERMISSION_REQUIRED: String = "permission_required"
 
-  private val zDevice: UsbDevice? = null
-  private val zConnection: UsbDeviceConnection? = null
-  private val zInterface: UsbInterface? = null
-  private val zEndpoint: UsbEndpoint? = null
+  private var zDevice: UsbDevice? = null
+  private var zConnection: UsbDeviceConnection? = null
+  private var zInterface: UsbInterface? = null
+  private var zEndpoint: UsbEndpoint? = null
 
   private val context
   get() = requireNotNull(appContext.reactContext)
