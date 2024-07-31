@@ -100,10 +100,10 @@ class ExpoSerialportModule : Module() {
   private val PERMISSION_DENIED: String = "permission_denied"
   private val PERMISSION_REQUIRED: String = "permission_required"
 
-  private val zDevice: UsbDevice? = null
-  private val zConnection: UsbDeviceConnection? = null
-  private val zInterface: UsbInterface? = null
-  private val zEndpoint: UsbEndpoint? = null
+  private var zDevice: UsbDevice? = null
+  private var zConnection: UsbDeviceConnection? = null
+  private var zInterface: UsbInterface? = null
+  private var zEndpoint: UsbEndpoint? = null
 
   private val context
   get() = requireNotNull(appContext.reactContext)
@@ -214,9 +214,9 @@ class ExpoSerialportModule : Module() {
   }
 
   private fun writePort(data: String, promise: Promise) {
-    zConnection.claimInterface(zInterface, true)
+    zConnection!!.claimInterface(zInterface, true)
     val dataBytes: ByteArray = data.toByteArray()
-    val writeRes: Int = zConnection.bulkTransfer(zEndpoint, dataBytes, dataBytes.size, 0)
+    val writeRes: Int = zConnection!!.bulkTransfer(zEndpoint, dataBytes, dataBytes.size, 0)
 
     if (writeRes >= 0){
       promise.resolve("PRINTED")
@@ -226,7 +226,7 @@ class ExpoSerialportModule : Module() {
       promise.reject(error)
     }
 
-    zConnection.releaseInterface(zInterface)
-    zConnection.close()
+    zConnection!!.releaseInterface(zInterface)
+    zConnection!!.close()
   }
 }
