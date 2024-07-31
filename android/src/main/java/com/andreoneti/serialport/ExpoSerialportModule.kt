@@ -214,9 +214,9 @@ class ExpoSerialportModule : Module() {
   }
 
   private fun writePort(data: String, promise: Promise) {
-    zConnection.claimInterface(zInterface, true)
+    zConnection!!.claimInterface(zInterface, true)
     val dataBytes: ByteArray = data.toByteArray()
-    val writeRes: Int = zConnection.bulkTransfer(zEndpoint, dataBytes, dataBytes.size, 0)
+    val writeRes: Int = zConnection!!.bulkTransfer(zEndpoint, dataBytes, dataBytes.size, 0)
 
     if (writeRes >= 0){
       promise.resolve("PRINTED")
@@ -226,7 +226,7 @@ class ExpoSerialportModule : Module() {
       promise.reject(error)
     }
 
-    zConnection.releaseInterface(zInterface)
-    zConnection.close()
+    zConnection!!.releaseInterface(zInterface)
+    zConnection!!.close()
   }
 }
