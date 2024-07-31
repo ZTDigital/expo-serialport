@@ -202,7 +202,7 @@ class ExpoSerialportModule : Module() {
         promise.reject(error)
     } else {
         zInterface = device.getInterface(0)
-        zEndpoint = zInterface.getEndpoint(0)
+        zEndpoint = zInterface!!.getEndpoint(0)
         if(zEndpoint == null){
           val interfaceErr: CodedException = CodedException("Interface and Endpoint Error")
           promise.reject(interfaceErr)
