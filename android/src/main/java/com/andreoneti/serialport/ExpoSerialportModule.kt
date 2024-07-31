@@ -14,6 +14,7 @@ import android.hardware.usb.UsbRequest
 import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDeviceConnection
+import android.hardware.usb.UsbEndpoint
 
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.WritableArray
@@ -90,12 +91,19 @@ class ExpoSerialportModule : Module() {
         openPort(usbDevice, promise)
       }
     }
-
+    AsyncFunction("writePortAsync") { data: String, promise: Promise ->
+      writePort(data, promise)
+    }
   }
 
   private val DEVICE_NOT_FOUND: String = "device_not_found"
   private val PERMISSION_DENIED: String = "permission_denied"
   private val PERMISSION_REQUIRED: String = "permission_required"
+
+  private val zDevice: UsbDevice? = null
+  private val zConnection: UsbDeviceConnection? = null
+  private val zInterface: UsbInterface? = null
+  private val zEndpoint: UsbEndpoint? = null
 
   private val context
   get() = requireNotNull(appContext.reactContext)
@@ -185,14 +193,40 @@ class ExpoSerialportModule : Module() {
     usbManager.requestPermission(device, permissionIntent)
   }
   private fun openPort(device: UsbDevice, promise: Promise) {
+    zDevice = device
     val usbManager: UsbManager = getUsbManager()
-    val connection: UsbDeviceConnection? = usbManager.openDevice(device)
+    zConnection = usbManager.openDevice(device)
 
-    if (connection == null) {
+    if (zConnection == null) {
         val error: CodedException = CodedException("connection_failed")
         promise.reject(error)
     } else {
-        promise.resolve("Port opened successfully")
+        zInterface = device.getInterface(0)
+        zEndpoint = zInterface.getEndpoint(0)
+        if(zEndpoint == null){
+          val interfaceErr: CodedException = CodedException("Interface and Endpoint Error")
+          promise.reject(interfaceErr)
+        }
+        else{
+          promise.resolve("PORT ON")
+        }
     }
+  }
+
+  private fun writePort(data: String, promise: Promise) {
+    zConnection.claimInterface(zInterface, true)
+    val dataBytes: ByteArray = data.toByteArray()
+    val writeRes: Int = zConnection.bulkTransfer(zEndpoint, dataBytes, dataBytes.size, 0)
+
+    if (writeRes >= 0){
+      promise.resolve("PRINTED")
+    }
+    else {
+      val error: CodedException = CodedException("connection_failed")
+      promise.reject(error)
+    }
+
+    zConnection.releaseInterface(zInterface)
+    zConnection.close()
   }
 }
